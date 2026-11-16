@@ -36,6 +36,12 @@ export const fake = {
   failures: new Map<string, string>(),
   /** Make particular calls fail: return an error message for the ones that should. */
   failIf: undefined as ((method: string, args: unknown) => string | undefined) | undefined,
+  /** Accounts Reddit no longer knows (deleted or suspended), lower-cased. Everyone else exists. */
+  gone: new Set<string>(),
+  /** When set, decides instead of `gone` whether Reddit knows an account at the moment it is asked. */
+  knows: undefined as ((name: string) => boolean) | undefined,
+  /** Every account lookup that got an answer, in order. Kept apart from `calls`: they change nothing. */
+  lookups: [] as string[],
   kv: new Map<string, string>(),
   hashes: new Map<string, Map<string, string>>(),
   zsets: new Map<string, ZMember[]>(),
@@ -53,6 +59,9 @@ export const fake = {
     this.muteUnarchives = false;
     this.failures = new Map();
     this.failIf = undefined;
+    this.gone = new Set();
+    this.knows = undefined;
+    this.lookups = [];
     this.kv = new Map();
     this.hashes = new Map();
     this.zsets = new Map();
@@ -92,6 +101,18 @@ const call = (method: string, result: unknown = {}) =>
 const zset = (key: string): ZMember[] => {
   if (!fake.zsets.has(key)) fake.zsets.set(key, []);
   return fake.zsets.get(key)!;
+};
+
+/**
+ * As the SDK's getUserByUsername: a user when Reddit knows the account,
+ * undefined when it does not (deleted or suspended), an error for anything else.
+ */
+const lookup = async (name: string): Promise<{ username: string } | undefined> => {
+  const failure = fake.failures.get('getUserByUsername') ?? fake.failIf?.('getUserByUsername', name);
+  if (failure) throw new Error(failure);
+  fake.lookups.push(name);
+  const known = fake.knows ? fake.knows(name) : !fake.gone.has(name.toLowerCase());
+  return known ? { username: name } : undefined;
 };
 
 mock.module('@devvit/web/server', {
@@ -147,7 +168,11 @@ mock.module('@devvit/web/server', {
         stop: number,
         options?: { by?: string; limit?: { offset: number; count: number } },
       ) => {
-        if (options?.by !== 'score') throw new Error('the fake only supports zRange by score');
+        if (options?.by === 'rank') {
+          if (start < 0 || stop < 0) throw new Error('the fake does not support negative ranks');
+          return zset(key).slice(start, stop + 1);
+        }
+        if (options?.by !== 'score') throw new Error('the fake only supports zRange by score or by rank');
         const inRange = zset(key).filter((m) => m.score >= start && m.score <= stop);
         const { offset = 0, count = 1000 } = options.limit ?? {};
         return inRange.slice(offset, offset + count);
@@ -165,6 +190,7 @@ mock.module('@devvit/web/server', {
         return removed;
       },
       hLen: async (key: string) => fake.hashes.get(key)?.size ?? 0,
+      hKeys: async (key: string) => [...(fake.hashes.get(key)?.keys() ?? [])],
       hGetAll: async (key: string) => Object.fromEntries(fake.hashes.get(key) ?? []),
       hIncrBy: async (key: string, field: string, by: number) => {
         if (!fake.hashes.has(key)) fake.hashes.set(key, new Map());
@@ -185,6 +211,9 @@ mock.module('@devvit/web/server', {
       },
     },
     reddit: {
+      getUserByUsername: lookup,
+      // As the SDK: the app's own account is looked up by the app's name.
+      getAppUser: () => lookup('modmail-regex-ban'),
       banUser: async (args: { reason?: string; note?: string; duration?: number }) => {
         await call('banUser')(args);
         fake.ban = { isBanned: true, isPermanent: !args.duration, reason: [args.reason, args.note].filter(Boolean).join(': ') };

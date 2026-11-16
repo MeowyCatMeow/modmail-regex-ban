@@ -7,6 +7,7 @@ import type {
   TriggerResponse,
 } from '@devvit/web/shared';
 import { BAN_MESSAGE_MAX_LENGTH, parseUsernames } from './config.ts';
+import { forgetDeletedAccounts } from './forget.ts';
 import { trimLedger } from './ledger.ts';
 import { handleModMail } from './modmail.ts';
 import { parsePatterns } from './patterns.ts';
@@ -58,6 +59,19 @@ const routes = new Map<string, (body: never) => Promise<object> | object>([
       const result = await renewMutes();
       if (result.renewed + result.lifted + result.failed > 0) {
         console.log(`Permanent mutes: ${result.renewed} renewed, ${result.lifted} lifted, ${result.failed} failed`);
+      }
+      return {};
+    },
+  ],
+  [
+    // Runs every hour; erases what the app holds about accounts that no longer exist.
+    '/internal/scheduler/forget-deleted',
+    async (): Promise<object> => {
+      const result = await forgetDeletedAccounts();
+      if (result.forgotten + result.failed > 0) {
+        console.log(
+          `Deleted-account check: ${result.checked} looked up, ${result.forgotten} forgotten, ${result.failed} failed`,
+        );
       }
       return {};
     },

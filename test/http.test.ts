@@ -111,6 +111,22 @@ test('the scheduler endpoint for renewing mutes runs the job, as Devvit calls it
   assert.deepEqual(fake.methods(), ['unmuteConversation', 'muteConversation']);
 });
 
+test('the scheduler endpoint for deleted accounts erases what is kept about them, as Devvit calls it', async () => {
+  // Nothing stored: a quiet no-op that asks Reddit nothing.
+  assert.deepEqual(await post('/internal/scheduler/forget-deleted', { name: 'forget-deleted' }), {});
+  assert.deepEqual(fake.lookups, []);
+
+  fake.zsets.set('ledger', [
+    { member: 'ban|deleted_user|c1', score: 1 },
+    { member: 'ban|spammer|c2', score: 2 },
+  ]);
+  fake.kv.delete('accounts:synced');
+  fake.gone.add('deleted_user');
+  assert.deepEqual(await post('/internal/scheduler/forget-deleted', { name: 'forget-deleted' }), {});
+  assert.deepEqual(fake.zsets.get('ledger'), [{ member: 'ban|spammer|c2', score: 2 }]);
+  assert.deepEqual(fake.calls, [], 'nothing is changed on Reddit');
+});
+
 test('the moderator-action endpoint lifts a permanent mute when a moderator unmutes someone', async () => {
   const until = Date.now() + 20 * 86_400_000; // their mute still has weeks to run
   fake.hashes.set('keepMuted', new Map([['spammer', JSON.stringify({ since: 1, pattern: 'x', conversationId: 'c1', at: 1, until })]]));
@@ -175,7 +191,7 @@ test('every endpoint named in devvit.json is served, and every select default is
   collect(config.triggers);
   collect(config.scheduler);
   collect(config.settings);
-  assert.equal(endpoints.length, 9);
+  assert.equal(endpoints.length, 10);
   for (const endpoint of endpoints) {
     const rsp = await fetch(origin + endpoint, { method: 'POST', body: '{}' });
     assert.notEqual(rsp.status, 404, `${endpoint} is not handled`);

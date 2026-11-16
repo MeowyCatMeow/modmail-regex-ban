@@ -24,4 +24,8 @@ export const KEYS = {
   undoLock: 'undo:lock',
   /** Hash: ledger entry -> failed attempts to undo it. */
   undoAttempts: 'undo:attempts',
+  /** Sorted set: every lower-cased username held anywhere above -> when to check next that the account still exists. */
+  accounts: 'accounts',
+  /** When the set above was last brought in line with what the app actually holds. */
+  accountsSynced: 'accounts:synced',
 } as const;

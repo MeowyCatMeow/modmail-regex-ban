@@ -35,7 +35,8 @@ Until you switch on or write at least one pattern, the app does nothing.
   user can still message moderators directly outside modmail.
 - **Privacy.** The app sends nothing outside Reddit and does not keep message
   contents. It keeps a list of who it banned, muted or archived, so that it
-  can undo it.
+  can undo it. It checks those accounts every week and erases what it kept
+  about any that no longer exist.
 
 ## Letting someone back in
 

@@ -23,6 +23,10 @@
         "endpoint": "/internal/scheduler/renew-mutes",
         "cron": "20 * * * *"
       },
+      "forget-deleted": {
+        "endpoint": "/internal/scheduler/forget-deleted",
+        "cron": "50 * * * *"
+      },
       "undo": {
         "endpoint": "/internal/scheduler/undo"
       }
