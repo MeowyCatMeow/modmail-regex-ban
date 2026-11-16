@@ -35,8 +35,20 @@ Until you switch on or write at least one pattern, the app does nothing.
   user can still message moderators directly outside modmail.
 - **Privacy.** The app sends nothing outside Reddit and does not keep message
   contents. It keeps a list of who it banned, muted or archived, so that it
-  can undo it. It checks those accounts every week and erases what it kept
-  about any that no longer exist.
+  can undo it.
+
+## Deleted and suspended accounts
+
+Reddit's rules require apps to erase what they keep about deleted accounts. So
+once a week the app checks whether the accounts it acted on still exist.
+
+Reddit answers "not found" for a deleted account, and also for one it has
+suspended. So that a short suspension does not make the app forget someone, it
+asks again ten days later and only then erases its records of them.
+
+Once erased, the app stops renewing that user's mute and archiving their mail,
+and **Undo everything** no longer covers them. Their ban on your subreddit
+stays.
 
 ## Letting someone back in
 

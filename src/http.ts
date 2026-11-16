@@ -68,9 +68,10 @@ const routes = new Map<string, (body: never) => Promise<object> | object>([
     '/internal/scheduler/forget-deleted',
     async (): Promise<object> => {
       const result = await forgetDeletedAccounts();
-      if (result.forgotten + result.failed > 0) {
+      if (result.missing + result.forgotten + result.failed > 0) {
         console.log(
-          `Deleted-account check: ${result.checked} looked up, ${result.forgotten} forgotten, ${result.failed} failed`,
+          `Deleted-account check: ${result.checked} looked up, ${result.missing} not found for the first time, ` +
+            `${result.forgotten} forgotten, ${result.failed} failed`,
         );
       }
       return {};

@@ -121,6 +121,8 @@ test('the scheduler endpoint for deleted accounts erases what is kept about them
     { member: 'ban|spammer|c2', score: 2 },
   ]);
   fake.kv.delete('accounts:synced');
+  // Reddit has not known this account for over ten days.
+  fake.hashes.set('accounts:missing', new Map([['deleted_user', String(Date.now() - 11 * 86_400_000)]]));
   fake.gone.add('deleted_user');
   assert.deepEqual(await post('/internal/scheduler/forget-deleted', { name: 'forget-deleted' }), {});
   assert.deepEqual(fake.zsets.get('ledger'), [{ member: 'ban|spammer|c2', score: 2 }]);

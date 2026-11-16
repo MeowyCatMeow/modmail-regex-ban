@@ -28,4 +28,6 @@ export const KEYS = {
   accounts: 'accounts',
   /** When the set above was last brought in line with what the app actually holds. */
   accountsSynced: 'accounts:synced',
+  /** Hash: lower-cased username -> when Reddit first answered "not found" for it, until that is confirmed or disproved. */
+  accountsMissing: 'accounts:missing',
 } as const;
