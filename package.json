@@ -1,0 +1,24 @@
+{
+  "name": "modmail-regex-ban",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "license": "BSD-3-Clause",
+  "scripts": {
+    "dev": "devvit playtest",
+    "upload": "devvit upload",
+    "type-check": "tsc --noEmit",
+    "build": "node build.mjs",
+    "test": "node --test --experimental-test-module-mocks test/*.test.ts",
+    "login": "devvit login"
+  },
+  "devDependencies": {
+    "@types/node": "^24.19.2",
+    "devvit": "0.15.3",
+    "esbuild": "^0.25.9",
+    "typescript": "^5.8.0"
+  },
+  "dependencies": {
+    "@devvit/web": "0.15.3"
+  }
+}

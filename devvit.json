@@ -1,0 +1,268 @@
+{
+  "$schema": "https://developers.reddit.com/schema/config-file.v1.json",
+  "name": "modmail-regex-ban",
+  "server": {
+    "dir": "dist/server",
+    "entry": "index.cjs"
+  },
+  "permissions": {
+    "reddit": true,
+    "redis": true
+  },
+  "triggers": {
+    "onModMail": "/internal/triggers/on-mod-mail",
+    "onModAction": "/internal/triggers/on-mod-action"
+  },
+  "scheduler": {
+    "tasks": {
+      "summary": {
+        "endpoint": "/internal/scheduler/summary",
+        "cron": "0 13 * * *"
+      },
+      "renew-mutes": {
+        "endpoint": "/internal/scheduler/renew-mutes",
+        "cron": "20 * * * *"
+      },
+      "undo": {
+        "endpoint": "/internal/scheduler/undo"
+      }
+    }
+  },
+  "scripts": {
+    "dev": "node build.mjs --watch",
+    "build": "node build.mjs"
+  },
+  "settings": {
+    "subreddit": {
+      "readyMade": {
+        "type": "group",
+        "label": "Ready-made patterns",
+        "helpText": "Switch on the ones you want. Each shows its title, then the regex it uses.",
+        "fields": {
+          "builtinBuySub": {
+            "type": "boolean",
+            "label": "Offers to buy, sell or monetize your subreddit:",
+            "helpText": "\\b(buy|purchas|sell|moneti[sz])\\w*\\s+(your|this|the)\\s+(sub|subreddit|community)\\b",
+            "defaultValue": false
+          },
+          "builtinTradeSubs": {
+            "type": "boolean",
+            "label": "Buying or selling subreddits for money:",
+            "helpText": "\\b(buy|sell)(ing)?\\s+(subs?|subreddits?)\\s+for\\s+(money|cash|\\$)",
+            "defaultValue": false
+          },
+          "builtinUnbanForMoney": {
+            "type": "boolean",
+            "label": "\"Unban me for money\":",
+            "helpText": "\\bunban\\b.{0,40}\\bfor\\s+(money|cash|\\$\\s?\\d+)",
+            "defaultValue": false
+          },
+          "builtinPayForPost": {
+            "type": "boolean",
+            "label": "\"Allow this post and I'll pay you\":",
+            "helpText": "\\b(approve|allow|restore)\\s+(my|this|the)\\s+post\\b.{0,60}(\\bpay\\s+(you|u)\\b|\\$\\s?\\d+)",
+            "defaultValue": false
+          },
+          "builtinPayYou": {
+            "type": "boolean",
+            "label": "Any offer to pay the moderators:",
+            "helpText": "\\b(i|we)('?ll|\\s+will|\\s+can|\\s+would)\\s+pay\\s+(you|u)\\b",
+            "defaultValue": false
+          }
+        }
+      },
+      "patterns": {
+        "type": "paragraph",
+        "label": "Your own regex patterns (one per line)",
+        "helpText": "Optional. A modmail that matches a ready-made pattern you switched on, or any line here, triggers the actions below. Write a bare pattern (case-insensitive) or /pattern/flags. Lines starting with # are ignored.",
+        "placeholder": "\\bunban\\b.{0,40}\\bfor\\s+(money|cash|\\$\\s?\\d+)\n/t\\.me\\/\\w+/i",
+        "validationEndpoint": "/internal/settings/validate-patterns"
+      },
+      "matchSubject": {
+        "type": "boolean",
+        "label": "Match against the modmail subject",
+        "defaultValue": true
+      },
+      "matchBody": {
+        "type": "boolean",
+        "label": "Match against the message body",
+        "defaultValue": true
+      },
+      "firstMessageOnly": {
+        "type": "boolean",
+        "label": "Only check the first message of a conversation",
+        "helpText": "Turn off to also check every later reply from the user.",
+        "defaultValue": false
+      },
+      "exemptUsers": {
+        "type": "paragraph",
+        "label": "Exempt users (one per line)",
+        "helpText": "The app never bans or mutes these users, and takes them off its permanent-mute list.",
+        "validationEndpoint": "/internal/settings/validate-exempt-users"
+      },
+      "ban": {
+        "type": "group",
+        "label": "Ban",
+        "fields": {
+          "banEnabled": {
+            "type": "boolean",
+            "label": "Ban the sender",
+            "defaultValue": true
+          },
+          "banLength": {
+            "type": "select",
+            "label": "Ban length",
+            "options": [
+              {
+                "label": "Permanent",
+                "value": "permanent"
+              },
+              {
+                "label": "1 day",
+                "value": "1"
+              },
+              {
+                "label": "3 days",
+                "value": "3"
+              },
+              {
+                "label": "7 days",
+                "value": "7"
+              },
+              {
+                "label": "14 days",
+                "value": "14"
+              },
+              {
+                "label": "30 days",
+                "value": "30"
+              },
+              {
+                "label": "60 days",
+                "value": "60"
+              },
+              {
+                "label": "90 days",
+                "value": "90"
+              },
+              {
+                "label": "180 days",
+                "value": "180"
+              },
+              {
+                "label": "365 days",
+                "value": "365"
+              }
+            ],
+            "defaultValue": "permanent"
+          },
+          "banReason": {
+            "type": "string",
+            "label": "Ban reason (shown to moderators, max 100 characters)",
+            "defaultValue": "Modmail matched a banned pattern"
+          },
+          "banMessage": {
+            "type": "paragraph",
+            "label": "Ban message sent to the user (optional, max 1000 characters)",
+            "validationEndpoint": "/internal/settings/validate-ban-message"
+          }
+        }
+      },
+      "mute": {
+        "type": "group",
+        "label": "Mute",
+        "fields": {
+          "muteEnabled": {
+            "type": "boolean",
+            "label": "Mute the sender in modmail",
+            "defaultValue": true
+          },
+          "muteDuration": {
+            "type": "select",
+            "label": "Mute length",
+            "helpText": "Reddit does not let apps set a true permanent mute, so both Permanent choices are workarounds. Recurring: the app renews a 28-day mute shortly before it ends; Reddit sends the user a mute notice each time, which apps cannot turn off (the user can mute notifications for that chat). Auto-archive: no further mutes or notices; after the first 28 days the app archives whatever they send. A muted account can still message moderators directly outside modmail.",
+            "options": [
+              {
+                "label": "3 days",
+                "value": "72"
+              },
+              {
+                "label": "7 days",
+                "value": "168"
+              },
+              {
+                "label": "28 days",
+                "value": "672"
+              },
+              {
+                "label": "Permanent: recurring 28-day mutes (recommended)",
+                "value": "permanent"
+              },
+              {
+                "label": "Permanent: auto-archive by username after 28 days",
+                "value": "permanent-archive"
+              }
+            ],
+            "defaultValue": "672"
+          },
+          "recurringMuteTip": {
+            "type": "boolean",
+            "label": "Recurring mutes: tell the user once how to silence the renewal notices",
+            "helpText": "Reddit notifies the user every time the mute is renewed, about every four weeks. When the recurring mute starts, the app sends them the message below.",
+            "defaultValue": true
+          },
+          "recurringMuteMessage": {
+            "type": "paragraph",
+            "label": "Recurring mutes: message sent to the user",
+            "defaultValue": "You have been muted from contacting the moderators of this community, and the mute renews automatically. Reddit will send you a mute notice each time, about every four weeks. If you would rather not be notified, you can mute notifications for this conversation in your chat window."
+          }
+        }
+      },
+      "addModNote": {
+        "type": "boolean",
+        "label": "Leave a private moderator note in the conversation saying what matched",
+        "defaultValue": true
+      },
+      "archive": {
+        "type": "boolean",
+        "label": "Archive the conversation afterwards",
+        "helpText": "Takes it out of the inbox and marks it read for all moderators. Apps cannot move a conversation to the Filtered folder.",
+        "defaultValue": true
+      },
+      "summaryFrequency": {
+        "type": "select",
+        "label": "Send a summary to modmail",
+        "helpText": "Lists who the app acted on and why. It is only sent when the app acted at least once in the period.",
+        "options": [
+          {
+            "label": "Never",
+            "value": "off"
+          },
+          {
+            "label": "Every week",
+            "value": "week"
+          },
+          {
+            "label": "Every month",
+            "value": "month"
+          },
+          {
+            "label": "Every year",
+            "value": "year"
+          }
+        ],
+        "defaultValue": "week"
+      },
+      "undoAll": {
+        "type": "boolean",
+        "label": "Undo everything the app has done",
+        "helpText": "Warning: while this is switched on, the app unbans and unmutes everyone it banned or muted, moves the conversations it archived back to your inbox, empties its permanent-mute list, and takes no new action. Bans or mutes a moderator has since changed are left alone. Private notes and messages the app already sent cannot be removed. You get a modmail when it has finished. Switch this off to let the app work again.",
+        "defaultValue": false,
+        "validationEndpoint": "/internal/settings/validate-undo"
+      }
+    }
+  },
+  "dev": {
+    "subreddit": "modmail_regex_ban_dev"
+  }
+}
